@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User - Detailed Repair Request</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root { --primary: #1a73e8; --success: #25D366; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f4f7fe; padding: 15px; margin: 0; }
+        .container { max-width: 450px; margin: auto; background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: #333; margin-bottom: 20px; }
+        .input-box { margin-bottom: 12px; }
+        label { display: block; font-weight: 600; margin-bottom: 5px; color: #555; font-size: 14px; }
+        input, select, textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; font-size: 14px; }
+        input:focus { border-color: var(--primary); outline: none; }
+        .row { display: flex; gap: 10px; }
+        button { width: 100%; padding: 14px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 16px; margin-top: 10px; transition: 0.3s; }
+        .btn-login { background: var(--primary); color: white; }
+        .btn-wa { background: var(--success); color: white; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .hidden { display: none; }
+        .footer { text-align: center; font-size: 12px; color: #999; margin-top: 20px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="auth-page">
+        <h2>User Login</h2>
+        <div class="input-box">
+            <label>Email</label>
+            <input type="email" id="email" placeholder="example@mail.com">
+        </div>
+        <div class="input-box">
+            <label>Password</label>
+            <input type="password" id="pass" placeholder="******">
+        </div>
+        <button class="btn-login" onclick="login()">Aage Badhein <i class="fas fa-arrow-right"></i></button>
+    </div>
+
+    <div id="form-page" class="hidden">
+        <h2>Repair Booking</h2>
+        
+        <div class="input-box">
+            <label><i class="fas fa-user"></i> Poora Naam</label>
+            <input type="text" id="uName" placeholder="Customer ka naam">
+        </div>
+
+        <div class="input-box">
+            <label><i class="fas fa-phone"></i> Mobile Number</label>
+            <input type="number" id="uPhone" placeholder="10 digit number">
+        </div>
+
+        <div class="row">
+            <div class="input-box" style="flex:1">
+                <label><i class="fas fa-tools"></i> Machine</label>
+                <select id="mType"><option>Loading...</option></select>
+            </div>
+            <div class="input-box" style="flex:1">
+                <label><i class="fas fa-bolt"></i> Urgency</label>
+                <select id="uUrgency">
+                    <option value="Normal">Normal</option>
+                    <option value="Urgent">Urgent (Zaroori)</option>
+                    <option value="Emergency">Emergency</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="input-box">
+            <label><i class="fas fa-calendar-alt"></i> Kab Aana Hai? (Preferred Time)</label>
+            <input type="datetime-local" id="uTime">
+        </div>
+
+        <div class="input-box">
+            <label><i class="fas fa-exclamation-circle"></i> Problem Detail</label>
+            <textarea id="uProblem" rows="2" placeholder="Machine mein kya dikkat hai?"></textarea>
+        </div>
+
+        <div class="input-box">
+            <label><i class="fas fa-map-marked-alt"></i> Poora Address</label>
+            <textarea id="uAddr" rows="2" placeholder="Ghar ka pata, Landmark ke sath"></textarea>
+        </div>
+
+        <button class="btn-wa" onclick="sendWA()">
+            <i class="fab fa-whatsapp"></i> Book via WhatsApp
+        </button>
+    </div>
+</div>
+
+<div class="footer">Powered by Repair Expert App</div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyADvpXNhjLdQSmYuC0Vfi1FjoodyjHLvwM",
+        authDomain: "mrmr-ba2dd.firebaseapp.com",
+        databaseURL: "https://mrmr-ba2dd-default-rtdb.firebaseio.com",
+        projectId: "mrmr-ba2dd",
+        storageBucket: "mrmr-ba2dd.firebasestorage.app",
+        messagingSenderId: "935591862883",
+        appId: "1:935591862883:web:54cb3ef14494335b27ce56"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
+    const ADMIN_NO = "917777980865";
+
+    // 1. Admin Categories Load
+    db.ref('Categories').on('value', snap => {
+        const sel = document.getElementById('mType');
+        sel.innerHTML = "";
+        snap.forEach(child => {
+            const data = child.val();
+            let opt = document.createElement('option');
+            opt.value = data.name;
+            opt.innerHTML = data.name;
+            sel.appendChild(opt);
+        });
+    });
+
+    function login() {
+        const e = document.getElementById('email').value;
+        const p = document.getElementById('pass').value;
+        if(!e || !p) { alert("Details bhariye!"); return; }
+        
+        auth.signInWithEmailAndPassword(e, p).then(() => {
+            document.getElementById('auth-page').classList.add('hidden');
+            document.getElementById('form-page').classList.remove('hidden');
+        }).catch(() => {
+            auth.createUserWithEmailAndPassword(e, p).then(() => {
+                document.getElementById('auth-page').classList.add('hidden');
+                document.getElementById('form-page').classList.remove('hidden');
+            });
+        });
+    }
+
+    function sendWA() {
+        const name = document.getElementById('uName').value;
+        const phone = document.getElementById('uPhone').value;
+        const machine = document.getElementById('mType').value;
+        const urgency = document.getElementById('uUrgency').value;
+        const time = document.getElementById('uTime').value;
+        const prob = document.getElementById('uProblem').value;
+        const addr = document.getElementById('uAddr').value;
+
+        if(!name || !phone || !addr) { alert("Naam, Phone aur Address zaroori hain!"); return; }
+
+        // WhatsApp Message Format
+        const msg = `*🔧 NAYI REPAIR BOOKING*%0A%0A` +
+                    `*👤 Naam:* ${name}%0A` +
+                    `*📞 Phone:* ${phone}%0A` +
+                    `*🛠 Machine:* ${machine}%0A` +
+                    `*⚡ Urgency:* ${urgency}%0A` +
+                    `*⏰ Slot:* ${time}%0A` +
+                    `*❓ Problem:* ${prob}%0A` +
+                    `*📍 Address:* ${addr}`;
+
+        window.open(`https://wa.me/${ADMIN_NO}?text=${msg}`, '_blank');
+    }
+</script>
+</body>
+</html>
